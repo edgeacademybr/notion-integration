@@ -73,27 +73,6 @@ async function getDataSourceId(databaseId: string): Promise<string> {
 	return dataSource.id;
 }
 
-// ─── Resolve Notion User ID from the Alunos page via created_by ──────────────
-// The Alunos database only needs Name + button — no extra user property required.
-// created_by is always populated by Notion and reflects who created the page
-// (i.e. the admin who added this student row).
-// If the student themselves should be the target, use the "Aluno" people
-// property instead and swap this function for a property lookup.
-async function getUserIdFromAlunoPage(alunoPageId: string): Promise<string> {
-	const page = (await notion.pages.retrieve({
-		page_id: alunoPageId,
-	})) as unknown as PageResponse;
-
-	const userId = page.created_by?.id;
-	if (!userId) {
-		throw new Error(
-			`Não foi possível obter o usuário da página: ${alunoPageId}`,
-		);
-	}
-
-	return userId;
-}
-
 // ─── Query a data source with pagination support ──────────────────────────────
 async function queryDataSource(
 	dataSourceId: string,
@@ -270,7 +249,7 @@ async function createEntriesInBatches(
 }
 
 // ─── Main exported function ───────────────────────────────────────────────────
-export async function initStudentProgress(alunoPageId: string): Promise<{
+export async function initStudentProgress(notionUserId: string): Promise<{
 	message: string;
 	created: number;
 	alreadyExisted: number;
@@ -280,8 +259,6 @@ export async function initStudentProgress(alunoPageId: string): Promise<{
 			"A variável de ambiente NOTION_TOKEN não está definida.",
 		);
 	}
-
-	const notionUserId = await getUserIdFromAlunoPage(alunoPageId);
 
 	const [allLessons, existingLessonIds, progressDataSourceId] =
 		await Promise.all([
