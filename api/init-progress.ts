@@ -41,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 	console.log("Recebido webhook para inicializar progresso do aluno.");
 	console.log("Payload:", req.body);
 
-	const { created_by } = req.body as { created_by: { id: string } };
+	const { created_by } = req.body.data as { created_by: { id: string } };
 	if (!created_by?.id) {
 		return res
 			.status(400)
