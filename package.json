@@ -1,0 +1,24 @@
+{
+  "name": "notion-integration",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "packageManager": "pnpm@10.27.0",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@notionhq/client": "^5.0.0",
+    "@vercel/node": "^5.6.16",
+    "dotenv": "^17.3.1"
+  },
+  "prettier": {
+    "useTabs": true,
+    "tabWidth": 4
+  }
+}

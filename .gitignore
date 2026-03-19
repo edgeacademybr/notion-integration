@@ -1,0 +1,7 @@
+node_modules
+.vercel
+
+# Ignore .env files anywhere in the project (more generic)
+**/.env
+
+.env.local
