@@ -14,7 +14,7 @@ const PROP = {
 	PROG_ALUNO: "Aluno",
 	PROG_AULA: "Aula",
 	PROG_STATUS: "Status",
-	STATUS_NOT_STARTED: "Não iniciado",
+	STATUS_NOT_STARTED: "Não iniciada",
 	STATUS_IN_PROGRESS: "Em andamento",
 } as const;
 
