@@ -11,13 +11,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 		return res.status(401).json({ error: "Não autorizado." });
 	}
 
-	const { userId } = req.body as { userId?: string };
-	if (!userId) {
-		return res.status(400).json({ error: "O campo userId é obrigatório." });
+	console.log("Recebido webhook para inicializar progresso do aluno.");
+	console.log("Payload:", req.body);
+
+	// The Notion automation sends {{current page.id}} — the Alunos database row.
+	// The script resolves the Notion User ID from that page's created_by field.
+	const { pageId } = req.body as { pageId?: string };
+	if (!pageId) {
+		return res.status(400).json({ error: "O campo pageId é obrigatório." });
 	}
 
 	try {
-		const result = await initStudentProgress(userId);
+		const result = await initStudentProgress(pageId);
 		return res.status(200).json(result);
 	} catch (err: unknown) {
 		console.error(err);

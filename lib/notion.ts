@@ -1,6 +1,8 @@
 import { Client } from "@notionhq/client";
 
 // ─── Database IDs ─────────────────────────────────────────────────────────────
+const DB_ALUNOS =
+	process.env.NOTION_DB_ALUNOS ?? "c2678666e07f82789d9a015c65cc7a69";
 const DB_AULAS =
 	process.env.NOTION_DB_AULAS ?? "cfc78666e07f8237b2a381fcef970b25";
 const DB_PROGRESSO =
@@ -17,7 +19,6 @@ const PROP = {
 } as const;
 
 // ─── SDK v5 with API version 2026-03-11 ───────────────────────────────────────
-// NOTION_TOKEN must be defined at runtime — validated below before use
 const notion = new Client({
 	auth: process.env.NOTION_TOKEN as string,
 	notionVersion: "2026-03-11",
@@ -52,8 +53,11 @@ interface DatabaseResponse {
 	data_sources: Array<{ id: string; name: string }>;
 }
 
+interface PageResponse {
+	created_by: { id: string };
+}
+
 // ─── Retrieve the first data source ID for a given database ──────────────────
-// Required by API 2025-09-03+: queries and page creation use data_source_id.
 async function getDataSourceId(databaseId: string): Promise<string> {
 	const db = (await notion.databases.retrieve({
 		database_id: databaseId,
@@ -69,9 +73,28 @@ async function getDataSourceId(databaseId: string): Promise<string> {
 	return dataSource.id;
 }
 
+// ─── Resolve Notion User ID from the Alunos page via created_by ──────────────
+// The Alunos database only needs Name + button — no extra user property required.
+// created_by is always populated by Notion and reflects who created the page
+// (i.e. the admin who added this student row).
+// If the student themselves should be the target, use the "Aluno" people
+// property instead and swap this function for a property lookup.
+async function getUserIdFromAlunoPage(alunoPageId: string): Promise<string> {
+	const page = (await notion.pages.retrieve({
+		page_id: alunoPageId,
+	})) as unknown as PageResponse;
+
+	const userId = page.created_by?.id;
+	if (!userId) {
+		throw new Error(
+			`Não foi possível obter o usuário da página: ${alunoPageId}`,
+		);
+	}
+
+	return userId;
+}
+
 // ─── Query a data source with pagination support ──────────────────────────────
-// notion.databases.query() was removed in API 2025-09-03+.
-// notion.request() calls the new /v1/data_sources/:id/query endpoint directly.
 async function queryDataSource(
 	dataSourceId: string,
 	body: Record<string, unknown>,
@@ -84,8 +107,6 @@ async function queryDataSource(
 }
 
 // ─── Cast raw API property to our discriminated union (or undefined) ──────────
-// The Notion SDK types raw properties as a wide open object, so we validate
-// the "type" field before narrowing — this is safer than casting inline.
 function castProperty(raw: unknown): NotionProperty | undefined {
 	if (typeof raw !== "object" || raw === null) return undefined;
 	const p = raw as Record<string, unknown>;
@@ -189,7 +210,6 @@ async function fetchExistingLessonIds(
 }
 
 // ─── Create a single progress entry ──────────────────────────────────────────
-// API 2025-09-03+: parent must use data_source_id, not database_id.
 async function createProgressEntry(
 	notionUserId: string,
 	lessonId: string,
@@ -250,7 +270,7 @@ async function createEntriesInBatches(
 }
 
 // ─── Main exported function ───────────────────────────────────────────────────
-export async function initStudentProgress(notionUserId: string): Promise<{
+export async function initStudentProgress(alunoPageId: string): Promise<{
 	message: string;
 	created: number;
 	alreadyExisted: number;
@@ -261,7 +281,8 @@ export async function initStudentProgress(notionUserId: string): Promise<{
 		);
 	}
 
-	// Resolve data source IDs in parallel — one retrieve call per database
+	const notionUserId = await getUserIdFromAlunoPage(alunoPageId);
+
 	const [allLessons, existingLessonIds, progressDataSourceId] =
 		await Promise.all([
 			fetchAllLessons(),
